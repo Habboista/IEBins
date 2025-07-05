@@ -47,28 +47,24 @@ class IEBins(BaseDepthModel):
         predictions = self.model.module(
             image_batch.to_tensor('cuda'),
         )
-
-        return predictions[0]
+        if not self.training:
+            return predictions[0][-1]
+        else:
+            return predictions[0]
 
     def prepare_for_forward(
         self, 
         image: BaseMap,
     ) -> BaseMap:
         H, W = image.camera['shape']
-        if H % 32 > 0:
-            pad_H = 32 - H % 32
-        else:
-            pad_H = 0
-        if W % 32 > 0:
-            pad_W = 32 - W % 32
-        else:
-            pad_W = 0
+        pad_H = H % 32
+        pad_W = W % 32
         image = image.transform_by(
             'pad_shape',
-            top=pad_H // 2,
-            bottom=pad_H - pad_H // 2,
-            left=pad_W // 2,
-            right=pad_W - pad_W // 2,
+            top=-pad_H,
+            bottom=0,
+            left=-(pad_W // 2),
+            right=-(pad_W - (pad_W // 2)),
         )
         if DEBUG:
             image.save("inference_1_pad.png")
